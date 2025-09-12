@@ -278,6 +278,8 @@
                 
                 scopeWorker.onerror = function(error) {
                     console.error('Scope worker error:', error);
+                    // Fallback: disabilita gli scopes se il worker fallisce
+                    scopesContainer.innerHTML = '<p class="text-red-500 text-center col-span-3">Errore nel calcolo degli scopes. Ricarica la pagina.</p>';
                 };
                 
                 scopeWorker.onmessage = function(e) {
@@ -350,46 +352,95 @@
         }
 
         async function loadImage(file) {
+            // Validazione file
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/bmp'];
+            if (!validTypes.includes(file.type)) {
+                alert(`Tipo file non supportato: ${file.type}. Usa JPEG, PNG, WebP o BMP.`);
+                return;
+            }
+            
+            // Controllo dimensione (max 50MB)
+            if (file.size > 50 * 1024 * 1024) {
+                alert(`File troppo grande: ${(file.size / 1024 / 1024).toFixed(1)}MB. Massimo 50MB.`);
+                return;
+            }
+            
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const img = new Image();
                 img.onload = async () => {
-                    const MAX_WIDTH = 1280, MAX_HEIGHT = 1280;
-                    let width = img.width, height = img.height;
-                    if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } }
-                    else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
-                    
-                    sourceCanvas.width = width; sourceCanvas.height = height;
-                    sourceCtx.drawImage(img, 0, 0, width, height);
+                    try {
+                        // Controllo dimensioni originali
+                        if (img.width < 10 || img.height < 10) {
+                            alert('Immagine troppo piccola. Minimo 10x10 pixel.');
+                            return;
+                        }
+                        
+                        const MAX_WIDTH = 1280, MAX_HEIGHT = 1280;
+                        let width = img.width, height = img.height;
+                        if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } }
+                        else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
+                        
+                        sourceCanvas.width = width; sourceCanvas.height = height;
+                        sourceCtx.drawImage(img, 0, 0, width, height);
 
-                    previewCanvas.width = width; previewCanvas.height = height;
-                    originalCanvas.width = width; originalCanvas.height = height;
-                    
-                    originalImageData = sourceCtx.getImageData(0, 0, width, height);
-                    originalCtx.putImageData(originalImageData, 0, 0);
+                        previewCanvas.width = width; previewCanvas.height = height;
+                        originalCanvas.width = width; originalCanvas.height = height;
+                        
+                        originalImageData = sourceCtx.getImageData(0, 0, width, height);
+                        originalCtx.putImageData(originalImageData, 0, 0);
 
-                    imageLoaded = true;
-                    canvasPlaceholder.classList.add('hidden');
-                    sliderContainer.style.setProperty('--img-aspect-ratio', `${width}/${height}`);
-                    sliderContainer.style.visibility = 'visible';
-                    scopesContainer.classList.remove('hidden');
+                        imageLoaded = true;
+                        canvasPlaceholder.classList.add('hidden');
+                        sliderContainer.style.setProperty('--img-aspect-ratio', `${width}/${height}`);
+                        sliderContainer.style.visibility = 'visible';
+                        scopesContainer.classList.remove('hidden');
 
-                    await applyAllLuts();
-                    await regenerateAllPreviews();
+                        await applyAllLuts();
+                        await regenerateAllPreviews();
+                    } catch (error) {
+                        console.error('Errore caricamento immagine:', error);
+                        alert('Errore nel caricamento dell\'immagine. Prova con un altro file.');
+                    }
+                };
+                img.onerror = () => {
+                    alert('Errore nel caricamento dell\'immagine. File corrotto o non valido.');
                 };
                 img.src = event.target.result;
+            };
+            reader.onerror = () => {
+                alert('Errore nella lettura del file.');
             };
             reader.readAsDataURL(file);
         }
 
         async function handleLutUpload(e) {
             if (e.target.files.length === 0) return;
+            
+            // Limite di memoria: max 50 LUT
+            if (loadedLUTs.length >= 50) {
+                alert('Limite massimo di 50 LUT raggiunto. Rimuovi alcune LUT prima di caricarne altre.');
+                e.target.value = '';
+                return;
+            }
+            
             showLoading(true);
             const files = Array.from(e.target.files).filter(f => f.name.endsWith('.cube') || f.name.endsWith('.3dl'));
+            let successCount = 0;
+            let errorCount = 0;
+            
             for (const file of files) {
                 try {
+                    // Controllo dimensione file (max 10MB)
+                    if (file.size > 10 * 1024 * 1024) {
+                        console.warn(`File troppo grande: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+                        errorCount++;
+                        continue;
+                    }
+                    
                     const text = await file.text();
                     let lutData;
+                    
                     if (file.name.endsWith('.cube')) {
                         lutData = parseCUBE(text);
                     } else if (file.name.endsWith('.3dl')) {
@@ -400,14 +451,33 @@
                         const lutId = `lut-${Date.now()}-${Math.random()}`;
                         if (!loadedLUTs.some(l => l.name === file.name)) {
                             loadedLUTs.push({ id: lutId, name: file.name, data: lutData, intensity: 1.0, isActive: false, isInMixer: false });
+                            successCount++;
+                        } else {
+                            console.warn(`LUT già presente: ${file.name}`);
                         }
-                    } else { console.warn(`Skipping non-valid LUT file: ${file.name}`); }
-                } catch (error) { console.error("Error loading LUT:", error); }
+                    } else { 
+                        console.warn(`LUT non valida: ${file.name}`);
+                        errorCount++;
+                    }
+                } catch (error) { 
+                    console.error(`Errore caricamento LUT ${file.name}:`, error);
+                    errorCount++;
+                }
             }
+            
             e.target.value = '';
             openLibraryBtn.disabled = loadedLUTs.length === 0;
-            await populateLutLibraryModal();
-            lutLibraryModal.classList.remove('hidden');
+            
+            // Feedback all'utente
+            if (successCount > 0) {
+                await populateLutLibraryModal();
+                lutLibraryModal.classList.remove('hidden');
+            }
+            
+            if (errorCount > 0) {
+                alert(`${errorCount} file LUT non sono stati caricati correttamente. Controlla la console per dettagli.`);
+            }
+            
             showLoading(false);
         }
 
@@ -516,29 +586,49 @@
         }
 
         async function applyAllLuts() {
-            if (!originalImageData || isProcessing) return; isProcessing = true;
-            const activeLuts = loadedLUTs.filter(lut => lut.isActive && lut.isInMixer);
+            if (!originalImageData || isProcessing) return; 
+            isProcessing = true;
             
-            const imageToProcess = new ImageData(new Uint8ClampedArray(originalImageData.data), originalImageData.width, originalImageData.height);
+            try {
+                const activeLuts = loadedLUTs.filter(lut => lut.isActive && lut.isInMixer);
+                
+                // Limite di sicurezza: max 10 LUT attive contemporaneamente
+                if (activeLuts.length > 10) {
+                    alert('Troppe LUT attive contemporaneamente. Massimo 10 per evitare problemi di performance.');
+                    isProcessing = false;
+                    return;
+                }
+                
+                const imageToProcess = new ImageData(new Uint8ClampedArray(originalImageData.data), originalImageData.width, originalImageData.height);
 
-            if (activeLuts.length === 0) {
-                 previewCtx.putImageData(imageToProcess, 0, 0); 
-                 triggerScopeUpdates(imageToProcess);
-                 isProcessing = false; 
-                 return;
-            }
+                if (activeLuts.length === 0) {
+                     previewCtx.putImageData(imageToProcess, 0, 0); 
+                     triggerScopeUpdates(imageToProcess);
+                     isProcessing = false; 
+                     return;
+                }
 
-            showLoading(true); await new Promise(resolve => setTimeout(resolve, 10));
-            
-            const data = imageToProcess.data;
-            for (let i = 0; i < data.length; i += 4) {
-                let r = data[i] / 255, g = data[i + 1] / 255, b = data[i + 2] / 255;
-                const [r_out, g_out, b_out] = getTransformedColor(r, g, b, activeLuts);
-                data[i] = Math.max(0, Math.min(255, r_out * 255)); data[i + 1] = Math.max(0, Math.min(255, g_out * 255)); data[i + 2] = Math.max(0, Math.min(255, b_out * 255));
+                showLoading(true); 
+                await new Promise(resolve => setTimeout(resolve, 10));
+                
+                const data = imageToProcess.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    let r = data[i] / 255, g = data[i + 1] / 255, b = data[i + 2] / 255;
+                    const [r_out, g_out, b_out] = getTransformedColor(r, g, b, activeLuts);
+                    data[i] = Math.max(0, Math.min(255, r_out * 255)); 
+                    data[i + 1] = Math.max(0, Math.min(255, g_out * 255)); 
+                    data[i + 2] = Math.max(0, Math.min(255, b_out * 255));
+                }
+                previewCtx.putImageData(imageToProcess, 0, 0);
+                triggerScopeUpdates(imageToProcess);
+                showLoading(false); 
+            } catch (error) {
+                console.error('Errore nell\'applicazione delle LUT:', error);
+                alert('Errore nell\'applicazione delle LUT. Riprova.');
+                showLoading(false);
+            } finally {
+                isProcessing = false;
             }
-            previewCtx.putImageData(imageToProcess, 0, 0);
-            triggerScopeUpdates(imageToProcess);
-            showLoading(false); isProcessing = false;
         }
 
         function triggerScopeUpdates(imageData) {
@@ -805,7 +895,64 @@
         }
 
         // --- LUT PARSING FUNCTIONS ---
-        function parseCUBE(text) { const lines = text.split('\n'); let size = 0; const tableData = []; for (const line of lines) { const trimmedLine = line.trim(); if (trimmedLine.startsWith('#') || trimmedLine.length === 0) continue; if (trimmedLine.startsWith('TITLE')) continue; if (trimmedLine.startsWith('DOMAIN_MIN')) continue; if (trimmedLine.startsWith('DOMAIN_MAX')) continue; if (trimmedLine.startsWith('LUT_3D_SIZE')) { size = parseInt(trimmedLine.split(/\s+/)[1]); } else if (!isNaN(parseFloat(trimmedLine.split(' ')[0]))) { const parts = trimmedLine.split(/\s+/).map(Number); if (parts.length === 3) { tableData.push(parts); } } } if (size === 0 || tableData.length !== size * size * size) { return null; } const table3D = []; let i = 0; for (let z = 0; z < size; z++) { const slice = []; for (let y = 0; y < size; y++) { const row = []; for (let x = 0; x < size; x++) { row.push(tableData[i++]); } slice.push(row); } table3D.push(slice); } return { size, table: table3D }; }
+        function parseCUBE(text) {
+            try {
+                const lines = text.split('\n');
+                let size = 0;
+                const tableData = [];
+                
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine.startsWith('#') || trimmedLine.length === 0) continue;
+                    if (trimmedLine.startsWith('TITLE')) continue;
+                    if (trimmedLine.startsWith('DOMAIN_MIN')) continue;
+                    if (trimmedLine.startsWith('DOMAIN_MAX')) continue;
+                    
+                    if (trimmedLine.startsWith('LUT_3D_SIZE')) {
+                        const sizeMatch = trimmedLine.match(/LUT_3D_SIZE\s+(\d+)/);
+                        if (sizeMatch) {
+                            size = parseInt(sizeMatch[1]);
+                            if (size < 2 || size > 256) {
+                                throw new Error(`Invalid LUT size: ${size}. Must be between 2 and 256.`);
+                            }
+                        }
+                    } else if (!isNaN(parseFloat(trimmedLine.split(' ')[0]))) {
+                        const parts = trimmedLine.split(/\s+/).map(Number);
+                        if (parts.length === 3 && parts.every(p => !isNaN(p) && p >= 0 && p <= 1)) {
+                            tableData.push(parts);
+                        }
+                    }
+                }
+                
+                if (size === 0) {
+                    throw new Error('LUT_3D_SIZE not found or invalid');
+                }
+                
+                const expectedEntries = size * size * size;
+                if (tableData.length !== expectedEntries) {
+                    throw new Error(`Expected ${expectedEntries} entries, found ${tableData.length}`);
+                }
+                
+                const table3D = [];
+                let i = 0;
+                for (let z = 0; z < size; z++) {
+                    const slice = [];
+                    for (let y = 0; y < size; y++) {
+                        const row = [];
+                        for (let x = 0; x < size; x++) {
+                            row.push(tableData[i++]);
+                        }
+                        slice.push(row);
+                    }
+                    table3D.push(slice);
+                }
+                
+                return { size, table: table3D };
+            } catch (error) {
+                console.error('CUBE parsing error:', error.message);
+                return null;
+            }
+        }
         function parse3DL(text) { const lines = text.split('\n'); const tableData = []; for (const line of lines) { const trimmedLine = line.trim(); if (trimmedLine.startsWith('#') || trimmedLine.length === 0) continue; const parts = trimmedLine.split(/\s+/).map(Number); if (parts.length === 3 && !parts.some(isNaN)) { tableData.push(parts); } } if (tableData.length === 0) return null; const size = Math.round(Math.cbrt(tableData.length)); if (size * size * size !== tableData.length) return null; const table3D = []; let i = 0; for (let z = 0; z < size; z++) { const slice = []; for (let y = 0; y < size; y++) { const row = []; for (let x = 0; x < size; x++) { row.push(tableData[i++]); } slice.push(row); } table3D.push(slice); } return { size, table: table3D }; }
 
         // --- PWA Installation Logic ---
