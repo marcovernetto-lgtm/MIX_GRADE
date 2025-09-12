@@ -57,6 +57,18 @@
             z-index: -1;
             overflow: hidden;
         }
+        #bg-video {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            z-index: -2;
+            opacity: 0.1;
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -77,7 +89,12 @@
     <!-- Hero Section -->
     <main>
         <section class="relative text-center py-20 md:py-32 px-6 flex items-center justify-center min-h-[70vh]">
-            <div id="lut-cube-container"></div>
+            <div id="lut-cube-container">
+                <video autoplay loop muted playsinline id="bg-video">
+                    <source src="https://streamable.com/l/k2knou" type="video/mp4">
+                    Il tuo browser non supporta i video in background.
+                </video>
+            </div>
             <div class="relative z-10 container mx-auto">
                 <div class="hero-text-panel">
                     <h1 class="text-5xl md:text-7xl font-extrabold text-white leading-tight mb-4">
@@ -125,6 +142,22 @@
                             Esporta la tua LUT combinata nei formati standard (.cube, .3dl) e con la dimensione che preferisci.
                         </p>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Animated Icon Video Section -->
+        <section id="animated-icon" class="py-20 px-6">
+            <div class="container mx-auto text-center">
+                <h2 class="text-4xl font-bold text-white mb-4">Design in Movimento</h2>
+                <p class="text-gray-400 max-w-2xl mx-auto mb-10">
+                    L'identità di MixGrade prende vita. Un'animazione fluida che rappresenta la fusione creativa di colori.
+                </p>
+                <div class="relative max-w-4xl mx-auto rounded-2xl shadow-2xl overflow-hidden border border-gray-800/50">
+                    <video autoplay loop muted playsinline class="w-full h-full">
+                        <source src="https://streamable.com/l/k2knou" type="video/mp4">
+                        Il tuo browser non supporta il video.
+                    </video>
                 </div>
             </div>
         </section>
