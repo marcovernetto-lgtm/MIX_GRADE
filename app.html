@@ -725,7 +725,11 @@
             ctx.clearRect(0, 0, width, height);
 
             const { r, g, b } = histograms;
-            const maxVal = Math.max(...r, ...g, ...b);
+            // Calcola maxVal senza spread operator per evitare stack overflow
+            let maxVal = 0;
+            for (let i = 0; i < r.length; i++) {
+                maxVal = Math.max(maxVal, r[i], g[i], b[i]);
+            }
             
             ctx.globalAlpha = 0.6;
             drawSingleHistogram(ctx, r, 'rgba(255, 99, 132, 1)', maxVal, width, height);
@@ -782,7 +786,11 @@
 
             const { width: dataWidth, height: dataHeight, r, g, b } = parade;
             
-            const maxVal = Math.max(...r, ...g, ...b);
+            // Calcola maxVal senza spread operator per evitare stack overflow
+            let maxVal = 0;
+            for (let i = 0; i < r.length; i++) {
+                maxVal = Math.max(maxVal, r[i], g[i], b[i]);
+            }
             if (maxVal === 0) return;
 
             // Disegna RGB Parade correttamente
@@ -873,7 +881,11 @@
             const scopeImageData = ctx.getImageData(0, 0, width, height);
             const displayData = scopeImageData.data;
             const { size, data } = vectorscope;
-            const maxVal = Math.max(...data);
+            // Calcola maxVal senza spread operator per evitare stack overflow
+            let maxVal = 0;
+            for (let i = 0; i < data.length; i++) {
+                maxVal = Math.max(maxVal, data[i]);
+            }
             if (maxVal === 0) return;
 
             const brightnessFactor = 255 / Math.max(1, Math.log(1 + maxVal));
