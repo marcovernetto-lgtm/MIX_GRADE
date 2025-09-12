@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MixGrade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#111827">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .loader {
+            border: 4px solid #4a4a4a;
+            border-top: 4px solid #14b8a6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        input[type="range"] {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 8px; background: #404040;
+            border-radius: 5px; outline: none; transition: opacity 0.2s;
+        }
+        input[type="range"]:disabled {
+            opacity: 0.5;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 20px; height: 20px; background: #f97316; /* Orange accent */
+            cursor: pointer; border-radius: 50%; border: 2px solid #1f2937;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px; height: 20px; background: #f97316; /* Orange accent */
+            cursor: pointer; border-radius: 50%; border: 2px solid #1f2937;
+        }
+        .lut-card.active {
+            border-color: #14b8a6; /* Teal accent for active LUT */
+            box-shadow: 0 0 15px rgba(20, 184, 166, 0.2);
+        }
+        .modal-item.selected {
+            border-color: #14b8a6;
+            outline: 2px solid #14b8a6;
+        }
+    </style>
+</head>
+<body class="bg-black text-gray-300 flex flex-col min-h-screen">
+
+    <header class="bg-gray-950/50 backdrop-blur-sm shadow-lg sticky top-0 z-20 border-b border-gray-800">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-white tracking-wider">
+                <a id="infoIconBtn" href="#" class="inline-block align-middle cursor-pointer">
+                    <img src="https://i.postimg.cc/FzHdn5n6/Mix-Grade-icon-transp.png" alt="MixGrade Icon" class="inline-block h-8 w-8 mr-2 -mt-1">
+                </a>
+                MixGrade
+            </h1>
+            <div class="flex items-center space-x-4">
+                <button id="installBtn" class="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-transform transform hover:scale-105 hidden">Installa App</button>
+                <button id="exportBtn" class="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:bg-gray-600 disabled:cursor-not-allowed disabled:scale-100">Esporta LUT</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8 flex-grow grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <div class="lg:col-span-2 bg-gray-900 rounded-xl shadow-2xl p-4 sm:p-6 flex flex-col items-center justify-center relative min-h-[400px] lg:min-h-[600px] border border-gray-800">
+            <canvas id="previewCanvas" class="max-w-full max-h-full rounded-lg shadow-inner"></canvas>
+            <div id="canvasPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-gray-600 z-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <p class="font-semibold text-lg">Carica un'immagine di riferimento</p>
+                <p class="text-sm">Trascina un file o usa i pulsanti a destra</p>
+            </div>
+            <div id="loadingIndicator" class="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center rounded-xl hidden z-10"><div class="loader"></div><p class="text-white mt-4 font-semibold">Elaborazione in corso...</p></div>
+        </div>
+
+        <div class="bg-gray-900 rounded-xl shadow-2xl p-6 flex flex-col space-y-6 border border-gray-800">
+            <div>
+                <h2 class="text-xl font-bold mb-4 border-b border-gray-800 pb-2 text-white">Controlli</h2>
+                <div class="space-y-3">
+                    <label for="imageUpload" class="w-full text-center block bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg cursor-pointer transition-colors">Carica Immagine</label>
+                    <input type="file" id="imageUpload" class="hidden" accept="image/*">
+                    <label for="lutUpload" class="w-full text-center block bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-4 rounded-lg cursor-pointer transition-colors">Aggiungi File LUT</label>
+                    <input type="file" id="lutUpload" class="hidden" accept=".cube,.3dl" multiple>
+                    <label for="lutFolderUpload" class="w-full text-center block bg-teal-800 hover:bg-teal-700 text-white font-semibold py-2 px-4 rounded-lg cursor-pointer transition-colors">Carica Cartella LUT</label>
+                    <input type="file" id="lutFolderUpload" class="hidden" accept=".cube,.3dl" webkitdirectory directory>
+                </div>
+            </div>
+            <div class="flex-grow flex flex-col">
+                <div class="flex justify-between items-center mb-3 border-b border-gray-800 pb-2">
+                     <h3 class="text-lg font-bold text-white">LUT nel Mixer</h3>
+                     <button id="openLibraryBtn" class="text-sm bg-gray-700 hover:bg-gray-600 text-white font-semibold py-1 px-3 rounded-lg disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed" disabled>Apri Libreria</button>
+                </div>
+                <div id="lutList" class="space-y-4 flex-grow overflow-y-auto pr-2 -mr-2">
+                    <p id="noLutMessage" class="text-gray-600 text-center py-4">Carica delle LUT e scegliile dalla libreria.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="lutLibraryModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-4xl h-full max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800">
+                <h2 class="text-xl font-bold text-white">Libreria LUT</h2>
+                <button id="closeLibraryBtn" class="text-gray-400 hover:text-white">&times;</button>
+            </div>
+            <div id="lutLibraryGrid" class="flex-grow p-4 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                </div>
+            <div class="p-4 border-t border-gray-800 flex justify-end">
+                <button id="confirmSelectionBtn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-lg">Aggiungi al Mixer</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="exportModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-md flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800">
+                <h2 class="text-xl font-bold text-white">Esporta LUT Combinata</h2>
+                <button id="closeExportBtn" class="text-gray-400 hover:text-white">&times;</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label for="lutFileName" class="block text-sm font-medium text-gray-400 mb-1">Nome File</label>
+                    <input type="text" id="lutFileName" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:ring-teal-500 focus:border-teal-500">
+                </div>
+                <div>
+                    <label for="lutSize" class="block text-sm font-medium text-gray-400 mb-1">Dimensione (Grid Points)</label>
+                    <select id="lutSize" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:ring-teal-500 focus:border-teal-500">
+                        <option value="17">17</option>
+                        <option value="33" selected>33 (Standard)</option>
+                        <option value="65">65 (Alta Qualità)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="lutFormat" class="block text-sm font-medium text-gray-400 mb-1">Formato</label>
+                    <select id="lutFormat" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:ring-teal-500 focus:border-teal-500">
+                        <option value="cube">.cube (Adobe)</option>
+                        <option value="3dl">.3dl (Autodesk)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-800 flex justify-end space-x-3">
+                <button id="cancelExportBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Annulla</button>
+                <button id="confirmExportBtn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-lg">Salva</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="infoModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-xl flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800">
+                <h2 class="text-xl font-bold text-white">Informazioni su MixGrade</h2>
+                <button id="closeInfoModalBtn" class="text-gray-400 hover:text-white">&times;</button>
+            </div>
+            <div class="p-6 space-y-4 text-gray-300">
+                <p><strong>MixGrade</strong> è un'applicazione web progressiva (PWA) progettata per aiutarti a miscelare più tabelle di ricerca (LUT) e applicarle alle tue immagini.</p>
+                <h3 class="font-bold text-lg text-white mt-4">Licenza Software (MIT License)</h3>
+                <p class="text-sm">
+                    Copyright (c) 2025 [by Vemarcus ]<br><br>
+                    È concesso il permesso, a titolo gratuito, a chiunque ottenga una copia di questo software e della documentazione associata (il "Software"), di trattare il Software senza restrizioni, inclusi, senza limitazione, i diritti di utilizzo, copia, modifica, fusione, pubblicazione, distribuzione, sublicenza e/o vendita di copie del Software, e di consentire alle persone a cui il Software è fornito di fare lo stesso, alle seguenti condizioni:<br><br>
+                    L'avviso di copyright di cui sopra e questo avviso di permesso devono essere inclusi in tutte le copie o parti sostanziali del Software.<br><br>
+                    IL SOFTWARE VIENE FORNITO "COSÌ COM'È", SENZA GARANZIA DI ALCUN TIPO, ESPRESSA O IMPLICITA, INCLUSE, MA NON LIMITATAMENTE A, LE GARANZIE DI COMMERCIABILITÀ, IDONEITÀ PER UNO SCOPO PARTICOLARE E NON VIOLAZIONE. IN NESSUN CASO GLI AUTORI O I TITOLARI DEL COPYRIGHT SARANNO RESPONSABILI PER QUALSIASI RIVENDICAZIONE, DANNO O ALTRA RESPONSABILITÀ, SIA IN UN'AZIONE CONTRATTUALE, DI TORTO O ALTRIMENTI, DERIVANTE DA, FUORI O IN CONNESSIONE CON IL SOFTWARE O L'USO O ALTRE NEGOZIAZIONI NEL SOFTWARE.
+                </p>
+                <h3 class="font-bold text-lg text-white mt-4">Supporta lo Sviluppo</h3>
+                <p>Ti piace MixGrade? Puoi supportare il suo sviluppo offrendomi un caffè!</p>
+                <a href="https://www.buymeacoffee.com/vemarcus" target="_blank" rel="noopener noreferrer" class="block w-full text-center bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2">
+                    <img src="https://www.buymeacoffee.com/assets/img/BMC-btn-logo.svg" alt="Buy Me a Coffee" class="h-5">
+                    <span>Offrimi un Caffè!</span>
+                </a>
+                <h3 class="font-bold text-lg text-white mt-4">Links Utili</h3>
+                <ul class="list-disc list-inside text-sm space-y-1">
+                    <li><a href="#" target="_blank" class="text-teal-400 hover:text-teal-300">Privacy Policy (Placeholder)</a></li>
+                    <li><a href="#" target="_blank" class="text-teal-400 hover:text-teal-300">Termini di Servizio (Placeholder)</a></li>
+                </ul>
+            </div>
+            <div class="p-4 border-t border-gray-800 flex justify-end">
+                <button id="closeInfoModalBtnBottom" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="sourceCanvas" style="display:none;"></canvas>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Selections ---
+        const imageUpload = document.getElementById('imageUpload'), lutUpload = document.getElementById('lutUpload'), lutFolderUpload = document.getElementById('lutFolderUpload');
+        const previewCanvas = document.getElementById('previewCanvas'), sourceCanvas = document.getElementById('sourceCanvas');
+        const previewCtx = previewCanvas.getContext('2d'), sourceCtx = sourceCanvas.getContext('2d');
+        const lutList = document.getElementById('lutList'), exportBtn = document.getElementById('exportBtn'), installBtn = document.getElementById('installBtn');
+        const loadingIndicator = document.getElementById('loadingIndicator'), noLutMessage = document.getElementById('noLutMessage'), canvasPlaceholder = document.getElementById('canvasPlaceholder');
+        const openLibraryBtn = document.getElementById('openLibraryBtn');
+        const lutLibraryModal = document.getElementById('lutLibraryModal'), closeLibraryBtn = document.getElementById('closeLibraryBtn'), confirmSelectionBtn = document.getElementById('confirmSelectionBtn'), lutLibraryGrid = document.getElementById('lutLibraryGrid');
+        const exportModal = document.getElementById('exportModal'), closeExportBtn = document.getElementById('closeExportBtn'), cancelExportBtn = document.getElementById('cancelExportBtn'), confirmExportBtn = document.getElementById('confirmExportBtn'), lutFileName = document.getElementById('lutFileName'), lutSize = document.getElementById('lutSize'), lutFormat = document.getElementById('lutFormat');
+
+        // Info Modal
+        const infoIconBtn = document.getElementById('infoIconBtn');
+        const infoModal = document.getElementById('infoModal');
+        const closeInfoModalBtn = document.getElementById('closeInfoModalBtn');
+        const closeInfoModalBtnBottom = document.getElementById('closeInfoModalBtnBottom');
+
+
+        let originalImageData = null, loadedLUTs = [], isProcessing = false, imageLoaded = false;
+
+        exportBtn.disabled = true;
+
+        // --- Event Listeners ---
+        imageUpload.addEventListener('change', handleImageUpload);
+        lutUpload.addEventListener('change', handleLutUpload);
+        lutFolderUpload.addEventListener('change', handleLutUpload);
+        exportBtn.addEventListener('click', () => {
+            lutFileName.value = `MixedLUT_${Date.now()}`;
+            exportModal.classList.remove('hidden');
+        });
+        openLibraryBtn.addEventListener('click', () => lutLibraryModal.classList.remove('hidden'));
+        closeLibraryBtn.addEventListener('click', () => lutLibraryModal.classList.add('hidden'));
+        confirmSelectionBtn.addEventListener('click', handleSelectionConfirmation);
+        closeExportBtn.addEventListener('click', () => exportModal.classList.add('hidden'));
+        cancelExportBtn.addEventListener('click', () => exportModal.classList.add('hidden'));
+        confirmExportBtn.addEventListener('click', confirmAndExport);
+
+        // Info Modal Event Listeners
+        infoIconBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            infoModal.classList.remove('hidden');
+        });
+        closeInfoModalBtn.addEventListener('click', () => infoModal.classList.add('hidden'));
+        closeInfoModalBtnBottom.addEventListener('click', () => infoModal.classList.add('hidden'));
+
+
+        const previewPanel = previewCanvas.parentElement;
+        previewPanel.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); previewPanel.classList.add('border-2', 'border-dashed', 'border-teal-500', 'bg-gray-800'); });
+        previewPanel.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); previewPanel.classList.remove('border-2', 'border-dashed', 'border-teal-500', 'bg-gray-800'); });
+        previewPanel.addEventListener('drop', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            previewPanel.classList.remove('border-2', 'border-dashed', 'border-teal-500', 'bg-gray-800');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const imageFile = Array.from(files).find(file => file.type.startsWith('image/'));
+                if (imageFile) { loadImage(imageFile); }
+            }
+        });
+
+        // --- Core Functions ---
+        function handleImageUpload(e) {
+            if (e.target.files && e.target.files[0]) {
+                loadImage(e.target.files[0]);
+            }
+        }
+
+        async function loadImage(file) {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const img = new Image();
+                img.onload = async () => {
+                    const MAX_WIDTH = 1280, MAX_HEIGHT = 1280;
+                    let width = img.width, height = img.height;
+                    if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } }
+                    else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
+                    sourceCanvas.width = width; sourceCanvas.height = height;
+                    sourceCtx.drawImage(img, 0, 0, width, height);
+                    previewCanvas.width = width; previewCanvas.height = height;
+                    originalImageData = sourceCtx.getImageData(0, 0, width, height);
+                    imageLoaded = true;
+                    canvasPlaceholder.classList.add('hidden');
+                    await applyAllLuts();
+                    await regenerateAllPreviews();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function handleLutUpload(e) {
+            if (e.target.files.length === 0) return;
+            showLoading(true);
+            const files = Array.from(e.target.files).filter(f => f.name.endsWith('.cube') || f.name.endsWith('.3dl'));
+            for (const file of files) {
+                try {
+                    const text = await file.text();
+                    let lutData;
+                    if (file.name.endsWith('.cube')) {
+                        lutData = parseCUBE(text);
+                    } else if (file.name.endsWith('.3dl')) {
+                        lutData = parse3DL(text);
+                    }
+
+                    if (lutData) {
+                        const lutId = `lut-${Date.now()}-${Math.random()}`;
+                        if (!loadedLUTs.some(l => l.name === file.name)) {
+                            loadedLUTs.push({ id: lutId, name: file.name, data: lutData, intensity: 1.0, isActive: false, isInMixer: false });
+                        }
+                    } else { console.warn(`Skipping non-valid LUT file: ${file.name}`); }
+                } catch (error) { console.error("Error loading LUT:", error); }
+            }
+            e.target.value = '';
+            openLibraryBtn.disabled = loadedLUTs.length === 0;
+            await populateLutLibraryModal();
+            lutLibraryModal.classList.remove('hidden');
+            showLoading(false);
+        }
+
+        async function populateLutLibraryModal() {
+            lutLibraryGrid.innerHTML = '';
+            if (!imageLoaded) {
+                 lutLibraryGrid.innerHTML = `<p class="col-span-full text-center text-gray-500">Carica prima un\'immagine per vedere le anteprime.</p>`;
+                 return;
+            }
+            showLoading(true);
+            for (const lut of loadedLUTs) {
+                const item = document.createElement('div');
+                item.className = 'modal-item cursor-pointer border-2 border-transparent rounded-lg p-2 bg-gray-800 hover:bg-gray-700';
+                if(lut.isInMixer) item.classList.add('selected');
+                item.dataset.lutId = lut.id;
+                item.innerHTML = `
+                    <canvas class="w-full h-auto aspect-video rounded-md bg-gray-700 pointer-events-none"></canvas>
+                    <p class="text-xs font-semibold truncate mt-1 text-center pointer-events-none" title="${lut.name}">${lut.name}</p>
+                `;
+                lutLibraryGrid.appendChild(item);
+                item.addEventListener('click', () => item.classList.toggle('selected'));
+                await generateLutPreview(lut, item.querySelector('canvas'));
+            }
+            showLoading(false);
+        }
+
+        function handleSelectionConfirmation() {
+            const selectedItems = lutLibraryGrid.querySelectorAll('.modal-item.selected');
+            const selectedIds = new Set(Array.from(selectedItems).map(item => item.dataset.lutId));
+            loadedLUTs.forEach(lut => {
+                lut.isInMixer = selectedIds.has(lut.id);
+            });
+            rebuildMixerUI();
+            lutLibraryModal.classList.add('hidden');
+        }
+
+        function rebuildMixerUI() {
+            lutList.innerHTML = '';
+            const mixerLuts = loadedLUTs.filter(l => l.isInMixer);
+            if (mixerLuts.length === 0) {
+                 noLutMessage.classList.remove('hidden');
+            } else {
+                 noLutMessage.classList.add('hidden');
+                 mixerLuts.forEach(addLutToMixerUI);
+            }
+            applyAllLuts();
+            updateUIState();
+        }
+
+        function addLutToMixerUI(lut) {
+            const lutElement = document.createElement('div');
+            lutElement.id = lut.id;
+            lutElement.className = `lut-card bg-gray-800/50 p-3 rounded-lg border border-gray-700 transition-all ${lut.isActive ? 'active' : ''}`;
+            lutElement.innerHTML = `
+                <div class="flex justify-between items-center mb-3">
+                    <p class="font-semibold text-xs truncate pr-2" title="${lut.name}">${lut.name}</p>
+                    <button class="remove-lut-btn text-gray-500 hover:text-red-500 transition-colors" data-id="${lut.id}">&times;</button>
+                </div>
+                <div class="flex items-center justify-between mb-3">
+                     <span class="text-xs font-medium text-gray-400">Attiva</span>
+                     <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="sr-only peer lut-toggle" data-id="${lut.id}" ${lut.isActive ? 'checked' : ''}>
+                        <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                    </label>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <input type="range" min="0" max="100" value="${lut.intensity * 100}" class="w-full lut-slider" data-id="${lut.id}" ${!lut.isActive ? 'disabled' : ''}>
+                    <span class="intensity-label text-sm font-mono w-10 text-right text-orange-400 ${!lut.isActive ? 'opacity-50' : ''}">${Math.round(lut.intensity * 100)}%</span>
+                </div>
+            `;
+            lutList.appendChild(lutElement);
+
+            const slider = lutElement.querySelector('.lut-slider'), intensityLabel = lutElement.querySelector('.intensity-label'), toggle = lutElement.querySelector('.lut-toggle');
+            toggle.addEventListener('change', (e) => {
+                const targetLut = loadedLUTs.find(l => l.id === lut.id);
+                if (targetLut) {
+                    targetLut.isActive = e.target.checked;
+                    slider.disabled = !e.target.checked;
+                    intensityLabel.classList.toggle('opacity-50', !e.target.checked);
+                    lutElement.classList.toggle('active', e.target.checked);
+                    updateUIState();
+                    applyAllLuts();
+                }
+            });
+            slider.addEventListener('input', (e) => {
+                const intensity = parseInt(e.target.value) / 100;
+                const targetLut = loadedLUTs.find(l => l.id === lut.id);
+                if (targetLut) targetLut.intensity = intensity;
+                intensityLabel.textContent = `${e.target.value}%`;
+                requestAnimationFrame(applyAllLuts);
+            });
+            lutElement.querySelector('.remove-lut-btn').addEventListener('click', () => {
+                const targetLut = loadedLUTs.find(l => l.id === lut.id);
+                if(targetLut) targetLut.isInMixer = false;
+                rebuildMixerUI();
+            });
+        }
+
+        function updateUIState() {
+            const activeLuts = loadedLUTs.filter(l => l.isActive && l.isInMixer);
+            exportBtn.disabled = activeLuts.length === 0;
+        }
+
+        async function applyAllLuts() {
+            if (!originalImageData || isProcessing) return; isProcessing = true;
+            const activeLuts = loadedLUTs.filter(lut => lut.isActive && lut.isInMixer);
+            if (activeLuts.length === 0) {
+                 previewCtx.putImageData(originalImageData, 0, 0); isProcessing = false; return;
+            }
+            showLoading(true); await new Promise(resolve => setTimeout(resolve, 10));
+            const processedImageData = new ImageData(new Uint8ClampedArray(originalImageData.data), originalImageData.width, originalImageData.height);
+            const data = processedImageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                let r = data[i] / 255, g = data[i + 1] / 255, b = data[i + 2] / 255;
+                const [r_out, g_out, b_out] = getTransformedColor(r, g, b, activeLuts);
+                data[i] = Math.max(0, Math.min(255, r_out * 255)); data[i + 1] = Math.max(0, Math.min(255, g_out * 255)); data[i + 2] = Math.max(0, Math.min(255, b_out * 255));
+            }
+            previewCtx.putImageData(processedImageData, 0, 0);
+            showLoading(false); isProcessing = false;
+        }
+
+        async function confirmAndExport() {
+            const activeLuts = loadedLUTs.filter(l => l.isActive && l.isInMixer);
+            if (activeLuts.length === 0) { alert("Nessuna LUT è stata attivata per il mix. Attiva almeno una LUT prima di esportare."); return; }
+
+            const size = parseInt(lutSize.value);
+            const fileName = lutFileName.value.trim() || 'MixedLUT';
+            const format = lutFormat.value;
+
+            if (!size || size < 2 || size > 256) { alert("Per favorer, seleziona una dimensione valida."); return; }
+
+            showLoading(true);
+            exportModal.classList.add('hidden');
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            let fileContent = '';
+            let fileExtension = '';
+
+            if (format === 'cube') {
+                fileContent = `# Generated by MixGrade\n`;
+                fileContent += `# MIT License (see MixGrade app for full details)\n`;
+                fileContent += `# Copyright (c) 2023 [Il Tuo Nome/Azienda]\n`;
+                fileContent += `TITLE "${fileName}"\nLUT_3D_SIZE ${size}\n\n`;
+                fileExtension = '.cube';
+            } else {
+                fileExtension = '.3dl';
+            }
+
+            for (let b = 0; b < size; b++) {
+                for (let g = 0; g < size; g++) {
+                    for (let r = 0; r < size; r++) {
+                        const [r_out, g_out, b_out] = getTransformedColor(r / (size - 1), g / (size - 1), b / (size - 1), activeLuts);
+                        fileContent += `${r_out.toFixed(6)} ${g_out.toFixed(6)} ${b_out.toFixed(6)}\n`;
+                    }
+                }
+            }
+
+            const blob = new Blob([fileContent], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${fileName}${fileExtension}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+            showLoading(false);
+        }
+
+        function getTransformedColor(r_in, g_in, b_in, lutsToApply) { let r = r_in, g = g_in, b = b_in; for (const lut of lutsToApply) { if (lut.intensity > 0) { const [lutR, lutG, lutB] = applyLutToPixel(r, g, b, lut.data); r = r + (lutR - r) * lut.intensity; g = g + (lutG - g) * lut.intensity; b = b + (lutB - b) * lut.intensity; } } return [r, g, b]; }
+
+        function applyLutToPixel(r, g, b, lutData) { const size = lutData.size; const table = lutData.table; r = Math.max(0, Math.min(1, r)); g = Math.max(0, Math.min(1, g)); b = Math.max(0, Math.min(1, b)); const x = r * (size - 1), y = g * (size - 1), z = b * (size - 1); const x0 = Math.floor(x), y0 = Math.floor(y), z0 = Math.floor(z); const x1 = Math.min(x0 + 1, size - 1), y1 = Math.min(y0 + 1, size - 1), z1 = Math.min(z0 + 1, size - 1); const xf = x - x0, yf = y - y0, zf = z - z0; const c000 = table[z0][y0][x0], c001 = table[z0][y0][x1], c010 = table[z0][y1][x0], c011 = table[z0][y1][x1]; const c100 = table[z1][y0][x0], c101 = table[z1][y0][x1], c110 = table[z1][y1][x0], c111 = table[z1][y1][x1]; const lerp = (a, b, t) => a + t * (b - a); const r_res = lerp(lerp(lerp(c000[0], c001[0], xf), lerp(c010[0], c011[0], xf), yf), lerp(lerp(c100[0], c101[0], xf), lerp(c110[0], c111[0], xf), yf), zf); const g_res = lerp(lerp(lerp(c000[1], c001[1], xf), lerp(c010[1], c011[1], xf), yf), lerp(lerp(c100[1], c101[1], xf), lerp(c110[1], c111[1], xf), yf), zf); const b_res = lerp(lerp(lerp(c000[2], c001[2], xf), lerp(c010[2], c011[2], xf), yf), lerp(lerp(c100[2], c101[2], xf), lerp(c110[2], c111[2], xf), yf), zf); return [r_res, g_res, b_res]; }
+
+        async function generateLutPreview(lut, canvas) {
+            if (!imageLoaded) return;
+            const ctx = canvas.getContext('2d');
+            const thumbWidth = 200, thumbHeight = (originalImageData.height / originalImageData.width) * thumbWidth;
+            canvas.width = thumbWidth; canvas.height = thumbHeight;
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = thumbWidth; tempCanvas.height = thumbHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(sourceCanvas, 0, 0, thumbWidth, thumbHeight);
+            const thumbImageData = tempCtx.getImageData(0, 0, thumbWidth, thumbHeight);
+            const data = thumbImageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                const [r, g, b] = applyLutToPixel(data[i]/255, data[i+1]/255, data[i+2]/255, lut.data);
+                data[i] = Math.max(0, Math.min(255, r * 255)); data[i+1] = Math.max(0, Math.min(255, g * 255)); data[i+2] = Math.max(0, Math.min(255, b * 255));
+            }
+            ctx.putImageData(thumbImageData, 0, 0);
+        }
+
+        async function regenerateAllPreviews() {
+            if(loadedLUTs.length > 0) {
+                await populateLutLibraryModal();
+            }
+        }
+
+        function showLoading(show) { loadingIndicator.classList.toggle('hidden', !show); }
+
+        // --- LUT PARSING FUNCTIONS ---
+        function parseCUBE(text) { const lines = text.split('\n'); let size = 0; const tableData = []; for (const line of lines) { const trimmedLine = line.trim(); if (trimmedLine.startsWith('#') || trimmedLine.length === 0) continue; if (trimmedLine.startsWith('TITLE')) continue; if (trimmedLine.startsWith('DOMAIN_MIN')) continue; if (trimmedLine.startsWith('DOMAIN_MAX')) continue; if (trimmedLine.startsWith('LUT_3D_SIZE')) { size = parseInt(trimmedLine.split(/\s+/)[1]); } else if (!isNaN(parseFloat(trimmedLine.split(' ')[0]))) { const parts = trimmedLine.split(/\s+/).map(Number); if (parts.length === 3) { tableData.push(parts); } } } if (size === 0 || tableData.length !== size * size * size) { return null; } const table3D = []; let i = 0; for (let z = 0; z < size; z++) { const slice = []; for (let y = 0; y < size; y++) { const row = []; for (let x = 0; x < size; x++) { row.push(tableData[i++]); } slice.push(row); } table3D.push(slice); } return { size, table: table3D }; }
+        function parse3DL(text) { const lines = text.split('\n'); const tableData = []; for (const line of lines) { const trimmedLine = line.trim(); if (trimmedLine.startsWith('#') || trimmedLine.length === 0) continue; const parts = trimmedLine.split(/\s+/).map(Number); if (parts.length === 3 && !parts.some(isNaN)) { tableData.push(parts); } } if (tableData.length === 0) return null; const size = Math.round(Math.cbrt(tableData.length)); if (size * size * size !== tableData.length) return null; const table3D = []; let i = 0; for (let z = 0; z < size; z++) { const slice = []; for (let y = 0; y < size; y++) { const row = []; for (let x = 0; x < size; x++) { row.push(tableData[i++]); } slice.push(row); } table3D.push(slice); } return { size, table: table3D }; }
+
+        // --- PWA Installation Logic ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js').then(registration => {
+                    console.log('ServiceWorker registration successful');
+                }, err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+            installBtn.addEventListener('click', () => {
+                installBtn.classList.add('hidden');
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    deferredPrompt = null;
+                });
+            });
+        });
+    });
+    </script>
+</body>
+</html>

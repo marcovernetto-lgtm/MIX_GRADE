@@ -1,0 +1,23 @@
+{
+    "name": "MixGrade",
+    "short_name": "MixGrade",
+    "description": "Un'applicazione per caricare, visualizzare, miscelare ed esportare LUT video.",
+    "start_url": "./lut_mixer.html",
+    "display": "standalone",
+    "background_color": "#111827",
+    "theme_color": "#111827",
+    "icons": [
+        {
+            "src": "https://i.postimg.cc/mD8h9p2y/Mixgrade-icon.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "https://i.postimg.cc/mD8h9p2y/Mixgrade-icon.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
