@@ -651,7 +651,7 @@
             ctx.beginPath();
             ctx.moveTo(0, height);
             for (let i = 0; i < data.length; i++) {
-                const barHeight = (data[i] / maxVal) * height;
+                const barHeight = (data[i] / maxVal) * (height * 0.8); // Riduce altezza al 80%
                 ctx.lineTo(i * binWidth, height - barHeight);
             }
             ctx.lineTo(width, height);
@@ -691,33 +691,47 @@
 
 
             const { width: dataWidth, height: dataHeight, r, g, b } = parade;
-            const paradeImageData = ctx.createImageData(width, height);
-            const displayData = paradeImageData.data;
             
             const maxVal = Math.max(...r, ...g, ...b);
             if (maxVal === 0) return;
 
-            const brightnessFactor = 255 / Math.max(1, Math.log(1 + maxVal));
-
-            const plotChannel = (data, channelOffset) => {
-                for (let i = 0; i < data.length; i++) {
-                    if (data[i] > 0) {
-                        const x = Math.floor((i % dataWidth) * (width / dataWidth));
-                        const y = Math.floor(Math.floor(i / dataWidth) * (height / dataHeight));
-                        const pixelIndex = (y * width + x) * 4;
-                        const brightness = Math.log(1 + data[i]) * brightnessFactor;
-                        
-                        displayData[pixelIndex + channelOffset] = Math.min(255, displayData[pixelIndex + channelOffset] + brightness);
-                        displayData[pixelIndex + 3] = 255;
-                    }
-                }
-            };
+            // Disegna RGB Parade come linee separate
+            const channelWidth = Math.floor(width / 3);
+            const channelHeight = height * 0.8; // Riduce altezza al 80%
             
-            plotChannel(r, 0);
-            plotChannel(g, 1);
-            plotChannel(b, 2);
-
-            ctx.putImageData(paradeImageData, 0, 0);
+            // Canale Rosso
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = 0; i < dataWidth; i++) {
+                const x = (i / dataWidth) * channelWidth;
+                const y = height - (r[i] / maxVal) * channelHeight;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Canale Verde
+            ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)';
+            ctx.beginPath();
+            for (let i = 0; i < dataWidth; i++) {
+                const x = channelWidth + (i / dataWidth) * channelWidth;
+                const y = height - (g[i] / maxVal) * channelHeight;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Canale Blu
+            ctx.strokeStyle = 'rgba(0, 0, 255, 0.8)';
+            ctx.beginPath();
+            for (let i = 0; i < dataWidth; i++) {
+                const x = (channelWidth * 2) + (i / dataWidth) * channelWidth;
+                const y = height - (b[i] / maxVal) * channelHeight;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
         }
 
         function drawVectorscope(vectorscope) {
@@ -726,7 +740,7 @@
             const height = vectorscopeCanvas.height;
             const centerX = width / 2;
             const centerY = height / 2;
-            const radius = width * 0.4;
+            const radius = width * 0.3; // Riduce il raggio del 25%
             ctx.clearRect(0, 0, width, height);
 
             // Draw graticule
