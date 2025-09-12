@@ -8,10 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#111827">
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/img-comparison-slider@8/dist/themes/fluid-dark.css"
-    />
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -86,6 +82,38 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+        
+        /* Stili per img-comparison-slider */
+        img-comparison-slider {
+            --divider-width: 2px;
+            --divider-color: #ffffff;
+            --default-handle-color: #ffffff;
+            --default-handle-width: 40px;
+            --default-handle-opacity: 0.8;
+            --default-handle-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        img-comparison-slider::part(handle) {
+            background: #ffffff;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        img-comparison-slider::part(divider) {
+            background: #ffffff;
+            opacity: 0.8;
+        }
+        
+        img-comparison-slider::part(before-label),
+        img-comparison-slider::part(after-label) {
+            background: rgba(0, 0, 0, 0.7);
+            color: #ffffff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
         }
     </style>
 </head>
@@ -860,16 +888,21 @@
                 newHeight = newWidth / aspectRatio;
             }
             
-            // Ridimensiona i canvas
+            // Ridimensiona i canvas mantenendo le stesse dimensioni
             previewCanvas.width = newWidth;
             previewCanvas.height = newHeight;
             originalCanvas.width = newWidth;
             originalCanvas.height = newHeight;
             
-            // Ridisegna le immagini sui canvas
+            // Ridisegna le immagini sui canvas mantenendo le proporzioni
             if (originalImageData) {
-                originalCtx.putImageData(originalImageData, 0, 0);
-                previewCtx.putImageData(originalImageData, 0, 0);
+                // Per il canvas originale, ridisegna l'immagine originale
+                originalCtx.clearRect(0, 0, newWidth, newHeight);
+                originalCtx.drawImage(sourceCanvas, 0, 0, newWidth, newHeight);
+                
+                // Per il canvas di preview, usa la stessa dimensione
+                previewCtx.clearRect(0, 0, newWidth, newHeight);
+                previewCtx.drawImage(sourceCanvas, 0, 0, newWidth, newHeight);
             }
             
             // Aggiorna l'aspect ratio del slider
