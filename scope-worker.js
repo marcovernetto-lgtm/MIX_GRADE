@@ -48,11 +48,16 @@ function calculateHistogram(imageData) {
     return histograms;
 }
 
-function calculateWaveform(imageData) {
+function calculateRGBParade(imageData) {
     const data = imageData.data;
     const width = imageData.width;
-    const lumaLevels = 256;
-    const waveformData = new Uint32Array(width * lumaLevels).fill(0);
+    const levels = 256;
+    
+    const paradeData = {
+        r: new Uint32Array(width * levels).fill(0),
+        g: new Uint32Array(width * levels).fill(0),
+        b: new Uint32Array(width * levels).fill(0),
+    };
 
     for (let x = 0; x < width; x++) {
         for (let y = 0; y < imageData.height; y++) {
@@ -60,21 +65,19 @@ function calculateWaveform(imageData) {
             const r = data[i];
             const g = data[i + 1];
             const b = data[i + 2];
-            // Luma calculation (Rec. 709)
-            const luma = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
-            
-            if (luma >= 0 && luma < lumaLevels) {
-                const index = (lumaLevels - 1 - luma) * width + x;
-                waveformData[index]++;
-            }
+
+            paradeData.r[(levels - 1 - r) * width + x]++;
+            paradeData.g[(levels - 1 - g) * width + x]++;
+            paradeData.b[(levels - 1 - b) * width + x]++;
         }
     }
-    return { width, height: lumaLevels, data: waveformData };
+    return { width, height: levels, ...paradeData };
 }
+
 
 function calculateVectorscope(imageData) {
     const data = imageData.data;
-    const size = 256;
+    const size = 256; // The resolution of our data grid
     const vectorscopeData = new Uint32Array(size * size).fill(0);
 
     for (let i = 0; i < data.length; i += 4) {
@@ -82,13 +85,16 @@ function calculateVectorscope(imageData) {
         const g = data[i + 1];
         const b = data[i + 2];
 
-        // Simple RGB to Chrominance (for display purposes, not true YUV)
-        const u = Math.round(b - (0.299 * r + 0.587 * g + 0.114 * b));
-        const v = Math.round(r - (0.299 * r + 0.587 * g + 0.114 * b));
+        // YUV conversion constants for Rec. 709
+        const u = (b - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 0.5389;
+        const v = (r - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 0.6350;
 
-        const x = Math.floor(u * (size / 2 / 255) + size / 2);
-        const y = Math.floor(v * (size / 2 / 255) + size / 2);
-
+        // Map UV coordinates to our grid.
+        // The center of the grid is (size/2, size/2).
+        // We scale the UV values to fit within the grid.
+        const x = Math.round((v / 128) * (size / 2) + size / 2);
+        const y = Math.round((-u / 128) * (size / 2) + size / 2);
+        
         if (x >= 0 && x < size && y >= 0 && y < size) {
             vectorscopeData[y * size + x]++;
         }
@@ -105,7 +111,7 @@ self.onmessage = function(e) {
         if (scopeType === 'histogram') {
             result = calculateHistogram(imageData);
         } else if (scopeType === 'waveform') {
-            result = calculateWaveform(imageData);
+            result = calculateRGBParade(imageData);
         } else if (scopeType === 'vectorscope') {
             result = calculateVectorscope(imageData);
         }

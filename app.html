@@ -93,7 +93,7 @@
             <div class="lg:col-span-2 flex flex-col gap-8">
                 <div class="bg-gray-900 rounded-xl shadow-2xl p-4 sm:p-6 flex flex-col items-center justify-center relative min-h-[400px] lg:min-h-[600px] border border-gray-800">
                      <div id="comparison-container">
-                        <img-comparison-slider class="comparison-slider" value="25" direction="vertical">
+                        <img-comparison-slider class="comparison-slider" value="50" direction="horizontal">
                             <figure slot="first" class="before-image">
                                 <canvas id="originalCanvas"></canvas>
                             </figure>
@@ -466,7 +466,7 @@
                 <div class="flex items-center space-x-3">
                     <input type="range" min="0" max="100" value="${lut.intensity * 100}" class="w-full lut-slider" data-id="${lut.id}" ${!lut.isActive ? 'disabled' : ''}>
                     <div class="bg-gray-900 rounded-lg px-2 py-1 w-16 text-center border border-gray-700">
-                        <span class="intensity-label font-mono text-base font-bold text-teal-400 ${!lut.isActive ? 'opacity-50' : ''}">${Math.round(lut.intensity * 100)}%</span>
+                        <span class="intensity-label font-mono text-base font-bold text-orange-400 ${!lut.isActive ? 'opacity-50' : ''}">${Math.round(lut.intensity * 100)}%</span>
                     </div>
                 </div>
             `;
@@ -533,9 +533,11 @@
 
         function triggerScopeUpdates(imageData) {
             if (!scopeWorker) return;
-            scopeWorker.postMessage({ imageData, scopeType: 'histogram' });
-            scopeWorker.postMessage({ imageData, scopeType: 'waveform' });
-            scopeWorker.postMessage({ imageData, scopeType: 'vectorscope' });
+            const activeTab = document.querySelector('.scope-tab.active');
+            if (!activeTab) return;
+            
+            const scopeType = activeTab.dataset.scope;
+            scopeWorker.postMessage({ imageData, scopeType });
         }
 
         async function confirmAndExport() {
@@ -647,36 +649,43 @@
             ctx.fill();
         }
 
-        function drawWaveform(waveform) {
+        function drawWaveform(parade) {
             const ctx = waveformCanvas.getContext('2d');
             const width = waveformCanvas.width;
             const height = waveformCanvas.height;
             ctx.clearRect(0, 0, width, height);
 
-            const { width: dataWidth, height: dataHeight, data } = waveform;
+            const { width: dataWidth, height: dataHeight, r, g, b } = parade;
             
-            const waveformImageData = ctx.createImageData(width, height);
-            const displayData = waveformImageData.data;
-
-            const maxVal = Math.max(...data);
+            const paradeImageData = ctx.createImageData(width, height);
+            
+            const maxR = Math.max(...r);
+            const maxG = Math.max(...g);
+            const maxB = Math.max(...b);
+            const maxVal = Math.max(maxR, maxG, maxB);
             if (maxVal === 0) return;
 
-            for (let i = 0; i < data.length; i++) {
-                const intensity = data[i] / maxVal;
-                if (intensity > 0) {
-                    const x = Math.floor((i % dataWidth) * (width / dataWidth));
-                    const y = Math.floor(Math.floor(i / dataWidth) * (height / dataHeight));
-                    
-                    const pixelIndex = (y * width + x) * 4;
-                    const greenIntensity = Math.min(255, intensity * 255 * 4);
+            const plotChannel = (data, channel, max) => {
+                for (let i = 0; i < data.length; i++) {
+                    const intensity = data[i] / max;
+                    if (intensity > 0) {
+                        const x = Math.floor((i % dataWidth) * (width / dataWidth));
+                        const y = Math.floor(Math.floor(i / dataWidth) * (height / dataHeight));
+                        
+                        const pixelIndex = (y * width + x) * 4;
+                        const brightness = Math.min(255, 50 + intensity * 255 * 2);
 
-                    displayData[pixelIndex] = 50;      // R
-                    displayData[pixelIndex + 1] = greenIntensity; // G
-                    displayData[pixelIndex + 2] = 50;      // B
-                    displayData[pixelIndex + 3] = 255;    // A
+                        paradeImageData.data[pixelIndex + channel] = brightness; // R, G, or B
+                        paradeImageData.data[pixelIndex + 3] = 255; // Alpha
+                    }
                 }
-            }
-            ctx.putImageData(waveformImageData, 0, 0);
+            };
+            
+            plotChannel(r, 0, maxVal); // Red
+            plotChannel(g, 1, maxVal); // Green
+            plotChannel(b, 2, maxVal); // Blue
+
+            ctx.putImageData(paradeImageData, 0, 0);
         }
 
         function drawVectorscope(vectorscope) {
@@ -684,23 +693,56 @@
             const width = vectorscopeCanvas.width;
             const height = vectorscopeCanvas.height;
             ctx.clearRect(0, 0, width, height);
-
-            // Draw graticule
             const centerX = width / 2;
             const centerY = height / 2;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-            ctx.lineWidth = 1;
+            const radius = width * 0.4;
 
-            // Concentric circles
-            ctx.beginPath(); ctx.arc(centerX, centerY, width * 0.1, 0, 2 * Math.PI); ctx.stroke();
-            ctx.beginPath(); ctx.arc(centerX, centerY, width * 0.2, 0, 2 * Math.PI); ctx.stroke();
-            ctx.beginPath(); ctx.arc(centerX, centerY, width * 0.3, 0, 2 * Math.PI); ctx.stroke();
-            ctx.beginPath(); ctx.arc(centerX, centerY, width * 0.4, 0, 2 * Math.PI); ctx.stroke();
+            // Draw graticule
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 1;
+            ctx.font = '10px monospace';
+
+            // Circles
+            [0.25, 0.5, 0.75, 1].forEach(r => {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius * r, 0, 2 * Math.PI);
+                ctx.stroke();
+            });
 
             // Axes
-            ctx.beginPath(); ctx.moveTo(0, centerY); ctx.lineTo(width, centerY); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(centerX, 0); ctx.lineTo(centerX, height); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(centerX - radius, centerY); ctx.lineTo(centerX + radius, centerY); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(centerX, centerY - radius); ctx.lineTo(centerX, centerY + radius); ctx.stroke();
 
+            // Skin tone line
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(-133 * Math.PI / 180);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(radius, 0);
+            ctx.strokeStyle = 'rgba(255, 220, 180, 0.5)';
+            ctx.stroke();
+            ctx.restore();
+
+            // Color targets
+            const targets = {
+                'R': { angle: 111.3, color: 'red' }, 'Mg': { angle: 69.4, color: 'magenta' },
+                'B': { angle: 23.9, color: 'blue' }, 'Cy': { angle: 342.3, color: 'cyan' },
+                'G': { angle: 291.3, color: 'green' }, 'Yl': { angle: 220.1, color: 'yellow' }
+            };
+
+            Object.keys(targets).forEach(key => {
+                const target = targets[key];
+                const angleRad = target.angle * Math.PI / 180;
+                const x = centerX + Math.cos(angleRad) * radius * 0.75;
+                const y = centerY - Math.sin(angleRad) * radius * 0.75;
+                ctx.fillStyle = target.color;
+                ctx.fillRect(x - 3, y - 3, 6, 6);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.fillText(key, x + 8, y + 4);
+            });
+            
 
             // Draw data points
             const { size, data } = vectorscope;
@@ -711,16 +753,16 @@
 
              for (let i = 0; i < data.length; i++) {
                 const intensity = data[i] / maxVal;
-                if (intensity > 0.01) { // Threshold to reduce noise
+                if (intensity > 0.005) { // Threshold to reduce noise
                     const x = Math.floor((i % size) * (width / size));
                     const y = Math.floor(Math.floor(i / size) * (height / size));
                     
                     const pixelIndex = (y * width + x) * 4;
-                    const greenIntensity = Math.min(255, intensity * 255 * 10);
+                    const brightness = Math.min(255, 50 + intensity * 255 * 5);
 
-                    displayData[pixelIndex] = 100;
-                    displayData[pixelIndex + 1] = greenIntensity;
-                    displayData[pixelIndex + 2] = 100;
+                    displayData[pixelIndex] = brightness;
+                    displayData[pixelIndex + 1] = brightness;
+                    displayData[pixelIndex + 2] = brightness;
                     displayData[pixelIndex + 3] = 255;
                 }
             }
