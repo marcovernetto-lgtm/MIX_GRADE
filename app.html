@@ -695,43 +695,38 @@
             const maxVal = Math.max(...r, ...g, ...b);
             if (maxVal === 0) return;
 
-            // Disegna RGB Parade come linee separate
+            // Disegna RGB Parade correttamente
             const channelWidth = Math.floor(width / 3);
-            const channelHeight = height * 0.8; // Riduce altezza al 80%
+            const channelHeight = height * 0.8;
             
-            // Canale Rosso
-            ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            for (let i = 0; i < dataWidth; i++) {
-                const x = (i / dataWidth) * channelWidth;
-                const y = height - (r[i] / maxVal) * channelHeight;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.stroke();
+            // Per ogni canale, disegna la distribuzione dei livelli lungo la larghezza
+            const drawChannel = (data, color, offsetX) => {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                
+                for (let x = 0; x < dataWidth; x++) {
+                    let maxLevel = 0;
+                    // Trova il livello più alto per questa colonna x
+                    for (let level = 0; level < dataHeight; level++) {
+                        const index = level * dataWidth + x;
+                        if (data[index] > maxLevel) {
+                            maxLevel = data[index];
+                        }
+                    }
+                    
+                    const canvasX = offsetX + (x / dataWidth) * channelWidth;
+                    const canvasY = height - (maxLevel / maxVal) * channelHeight;
+                    
+                    if (x === 0) ctx.moveTo(canvasX, canvasY);
+                    else ctx.lineTo(canvasX, canvasY);
+                }
+                ctx.stroke();
+            };
             
-            // Canale Verde
-            ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)';
-            ctx.beginPath();
-            for (let i = 0; i < dataWidth; i++) {
-                const x = channelWidth + (i / dataWidth) * channelWidth;
-                const y = height - (g[i] / maxVal) * channelHeight;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.stroke();
-            
-            // Canale Blu
-            ctx.strokeStyle = 'rgba(0, 0, 255, 0.8)';
-            ctx.beginPath();
-            for (let i = 0; i < dataWidth; i++) {
-                const x = (channelWidth * 2) + (i / dataWidth) * channelWidth;
-                const y = height - (b[i] / maxVal) * channelHeight;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.stroke();
+            drawChannel(r, 'rgba(255, 0, 0, 0.8)', 0);
+            drawChannel(g, 'rgba(0, 255, 0, 0.8)', channelWidth);
+            drawChannel(b, 'rgba(0, 0, 255, 0.8)', channelWidth * 2);
         }
 
         function drawVectorscope(vectorscope) {
