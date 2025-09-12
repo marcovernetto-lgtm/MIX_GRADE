@@ -272,13 +272,20 @@
         exportBtn.disabled = true;
 
         if (window.Worker) {
-            scopeWorker = new Worker('scope-worker.js');
-            scopeWorker.onmessage = function(e) {
-                const { scopeType, result, error } = e.data;
-                if (error) {
-                    console.error('Error in scope worker:', error);
-                    return;
-                }
+            try {
+                scopeWorker = new Worker('scope-worker.js');
+                console.log('Scope worker created successfully');
+                
+                scopeWorker.onerror = function(error) {
+                    console.error('Scope worker error:', error);
+                };
+                
+                scopeWorker.onmessage = function(e) {
+                    const { scopeType, result, error } = e.data;
+                    if (error) {
+                        console.error('Error in scope worker:', error);
+                        return;
+                    }
                 
                 requestAnimationFrame(() => {
                     if (scopeType === 'histogram') {
@@ -290,6 +297,9 @@
                     }
                 });
             };
+            } catch (error) {
+                console.error('Failed to create scope worker:', error);
+            }
         } else {
             console.error("Web Workers are not supported in your browser. Scopes will not be available.");
             scopesContainer.innerHTML = '<p class="text-red-500 text-center">I Web Worker non sono supportati in questo browser. Gli scope non sono disponibili.</p>';
@@ -533,11 +543,11 @@
 
         function triggerScopeUpdates(imageData) {
             if (!scopeWorker) return;
-            const activeTab = document.querySelector('.scope-tab.active');
-            if (!activeTab) return;
             
-            const scopeType = activeTab.dataset.scope;
-            scopeWorker.postMessage({ imageData, scopeType });
+            // Calcola tutti e tre gli scopes contemporaneamente
+            scopeWorker.postMessage({ imageData, scopeType: 'histogram' });
+            scopeWorker.postMessage({ imageData, scopeType: 'waveform' });
+            scopeWorker.postMessage({ imageData, scopeType: 'vectorscope' });
         }
 
         async function confirmAndExport() {
