@@ -268,6 +268,7 @@
 
         let originalImageData = null, loadedLUTs = [], isProcessing = false, imageLoaded = false;
         let scopeWorker = null;
+        let applyLutsTimeout = null; // Per debouncing
 
         exportBtn.disabled = true;
 
@@ -571,7 +572,12 @@
                 const targetLut = loadedLUTs.find(l => l.id === lut.id);
                 if (targetLut) targetLut.intensity = intensity;
                 intensityLabel.textContent = `${e.target.value}%`;
-                requestAnimationFrame(applyAllLuts);
+                
+                // Debouncing per evitare troppe chiamate
+                if (applyLutsTimeout) clearTimeout(applyLutsTimeout);
+                applyLutsTimeout = setTimeout(() => {
+                    requestAnimationFrame(applyAllLuts);
+                }, 50);
             });
             lutElement.querySelector('.remove-lut-btn').addEventListener('click', () => {
                 const targetLut = loadedLUTs.find(l => l.id === lut.id);
@@ -687,9 +693,70 @@
             showLoading(false);
         }
 
-        function getTransformedColor(r_in, g_in, b_in, lutsToApply) { let r = r_in, g = g_in, b = b_in; for (const lut of lutsToApply) { if (lut.intensity > 0) { const [lutR, lutG, lutB] = applyLutToPixel(r, g, b, lut.data); r = r + (lutR - r) * lut.intensity; g = g + (lutG - g) * lut.intensity; b = b + (lutB - b) * lut.intensity; } } return [r, g, b]; }
+        function getTransformedColor(r_in, g_in, b_in, lutsToApply) {
+            let r = r_in, g = g_in, b = b_in;
+            for (const lut of lutsToApply) {
+                if (lut.intensity > 0) {
+                    const [lutR, lutG, lutB] = applyLutToPixel(r, g, b, lut.data);
+                    r = r + (lutR - r) * lut.intensity;
+                    g = g + (lutG - g) * lut.intensity;
+                    b = b + (lutB - b) * lut.intensity;
+                }
+            }
+            return [r, g, b];
+        }
 
-        function applyLutToPixel(r, g, b, lutData) { const size = lutData.size; const table = lutData.table; r = Math.max(0, Math.min(1, r)); g = Math.max(0, Math.min(1, g)); b = Math.max(0, Math.min(1, b)); const x = r * (size - 1), y = g * (size - 1), z = b * (size - 1); const x0 = Math.floor(x), y0 = Math.floor(y), z0 = Math.floor(z); const x1 = Math.min(x0 + 1, size - 1), y1 = Math.min(y0 + 1, size - 1), z1 = Math.min(z0 + 1, size - 1); const xf = x - x0, yf = y - y0, zf = z - z0; const c000 = table[z0][y0][x0], c001 = table[z0][y0][x1], c010 = table[z0][y1][x0], c011 = table[z0][y1][x1]; const c100 = table[z1][y0][x0], c101 = table[z1][y0][x1], c110 = table[z1][y1][x0], c111 = table[z1][y1][x1]; const lerp = (a, b, t) => a + t * (b - a); const r_res = lerp(lerp(lerp(c000[0], c001[0], xf), lerp(c010[0], c011[0], xf), yf), lerp(lerp(c100[0], c101[0], xf), lerp(c110[0], c111[0], xf), yf), zf); const g_res = lerp(lerp(lerp(c000[1], c001[1], xf), lerp(c010[1], c011[1], xf), yf), lerp(lerp(c100[1], c101[1], xf), lerp(c110[1], c111[1], xf), yf), zf); const b_res = lerp(lerp(lerp(c000[2], c001[2], xf), lerp(c010[2], c011[2], xf), yf), lerp(lerp(c100[2], c101[2], xf), lerp(c110[2], c111[2], xf), yf), zf); return [r_res, g_res, b_res]; }
+        function applyLutToPixel(r, g, b, lutData) {
+            const size = lutData.size;
+            const table = lutData.table;
+            
+            // Clamp values to [0,1]
+            r = Math.max(0, Math.min(1, r));
+            g = Math.max(0, Math.min(1, g));
+            b = Math.max(0, Math.min(1, b));
+            
+            // Calculate 3D coordinates
+            const x = r * (size - 1);
+            const y = g * (size - 1);
+            const z = b * (size - 1);
+            
+            // Get integer coordinates
+            const x0 = Math.floor(x), y0 = Math.floor(y), z0 = Math.floor(z);
+            const x1 = Math.min(x0 + 1, size - 1);
+            const y1 = Math.min(y0 + 1, size - 1);
+            const z1 = Math.min(z0 + 1, size - 1);
+            
+            // Get fractional parts
+            const xf = x - x0, yf = y - y0, zf = z - z0;
+            
+            // Get corner values
+            const c000 = table[z0][y0][x0], c001 = table[z0][y0][x1];
+            const c010 = table[z0][y1][x0], c011 = table[z0][y1][x1];
+            const c100 = table[z1][y0][x0], c101 = table[z1][y0][x1];
+            const c110 = table[z1][y1][x0], c111 = table[z1][y1][x1];
+            
+            // Linear interpolation function
+            const lerp = (a, b, t) => a + t * (b - a);
+            
+            // Trilinear interpolation
+            const r_res = lerp(
+                lerp(lerp(c000[0], c001[0], xf), lerp(c010[0], c011[0], xf), yf),
+                lerp(lerp(c100[0], c101[0], xf), lerp(c110[0], c111[0], xf), yf),
+                zf
+            );
+            const g_res = lerp(
+                lerp(lerp(c000[1], c001[1], xf), lerp(c010[1], c011[1], xf), yf),
+                lerp(lerp(c100[1], c101[1], xf), lerp(c110[1], c111[1], xf), yf),
+                zf
+            );
+            const b_res = lerp(
+                lerp(lerp(c000[2], c001[2], xf), lerp(c010[2], c011[2], xf), yf),
+                lerp(lerp(c100[2], c101[2], xf), lerp(c110[2], c111[2], xf), yf),
+                zf
+            );
+            
+            return [r_res, g_res, b_res];
+        }
 
         async function generateLutPreview(lut, canvas) {
             if (!imageLoaded) return;
@@ -966,6 +1033,21 @@
             }
         }
         function parse3DL(text) { const lines = text.split('\n'); const tableData = []; for (const line of lines) { const trimmedLine = line.trim(); if (trimmedLine.startsWith('#') || trimmedLine.length === 0) continue; const parts = trimmedLine.split(/\s+/).map(Number); if (parts.length === 3 && !parts.some(isNaN)) { tableData.push(parts); } } if (tableData.length === 0) return null; const size = Math.round(Math.cbrt(tableData.length)); if (size * size * size !== tableData.length) return null; const table3D = []; let i = 0; for (let z = 0; z < size; z++) { const slice = []; for (let y = 0; y < size; y++) { const row = []; for (let x = 0; x < size; x++) { row.push(tableData[i++]); } slice.push(row); } table3D.push(slice); } return { size, table: table3D }; }
+
+        // --- Cleanup Logic ---
+        window.addEventListener('beforeunload', () => {
+            // Cleanup Web Worker
+            if (scopeWorker) {
+                scopeWorker.terminate();
+                scopeWorker = null;
+            }
+            
+            // Cleanup timeout
+            if (applyLutsTimeout) {
+                clearTimeout(applyLutsTimeout);
+                applyLutsTimeout = null;
+            }
+        });
 
         // --- PWA Installation Logic ---
         if ('serviceWorker' in navigator) {
