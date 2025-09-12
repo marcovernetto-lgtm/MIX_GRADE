@@ -69,19 +69,6 @@
             aspect-ratio: var(--img-aspect-ratio, 1/1);
             visibility: hidden; /* Initially hidden */
         }
-        .scope-tab {
-            transition: all 0.2s ease-in-out;
-        }
-        .scope-tab.active {
-            background-color: #14b8a6;
-            color: white;
-        }
-        .scope-panel {
-            display: none;
-        }
-        .scope-panel.active {
-            display: block;
-        }
     </style>
 </head>
 <body class="bg-black text-gray-300 flex flex-col min-h-screen">
@@ -124,21 +111,19 @@
                 </div>
 
                 <!-- Color Scopes Section -->
-                <div id="scopes-container" class="bg-gray-900 rounded-xl shadow-2xl p-6 border border-gray-800 hidden">
-                    <div class="flex mb-4 border-b border-gray-700">
-                        <button data-scope="histogram" class="scope-tab active text-sm font-semibold py-2 px-4 text-gray-400 rounded-t-md">Istogramma</button>
-                        <button data-scope="waveform" class="scope-tab text-sm font-semibold py-2 px-4 text-gray-400 rounded-t-md">Waveform</button>
-                        <button data-scope="vectorscope" class="scope-tab text-sm font-semibold py-2 px-4 text-gray-400 rounded-t-md">Vettorscopio</button>
-                    </div>
-                    <div class="relative h-48">
-                        <div id="histogram-panel" class="scope-panel active">
-                            <canvas id="histogramCanvas" class="w-full h-full"></canvas>
+                <div id="scopes-container" class="bg-gray-900 rounded-xl shadow-2xl p-4 border border-gray-800 hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                        <div>
+                            <h3 class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Istogramma</h3>
+                            <canvas id="histogramCanvas" width="256" height="150" class="bg-black/20 rounded-md w-full h-auto"></canvas>
                         </div>
-                        <div id="waveform-panel" class="scope-panel">
-                             <canvas id="waveformCanvas" class="w-full h-full"></canvas>
+                        <div>
+                            <h3 class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Waveform</h3>
+                            <canvas id="waveformCanvas" width="256" height="150" class="bg-black/20 rounded-md w-full h-auto"></canvas>
                         </div>
-                        <div id="vectorscope-panel" class="scope-panel">
-                             <canvas id="vectorscopeCanvas" class="w-full h-full"></canvas>
+                        <div>
+                            <h3 class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Vettorscopio</h3>
+                            <canvas id="vectorscopeCanvas" width="256" height="150" class="bg-black/20 rounded-md w-full h-auto"></canvas>
                         </div>
                     </div>
                 </div>
@@ -548,11 +533,9 @@
 
         function triggerScopeUpdates(imageData) {
             if (!scopeWorker) return;
-            const activeTab = document.querySelector('.scope-tab.active');
-            if (!activeTab) return;
-            
-            const scopeType = activeTab.dataset.scope;
-            scopeWorker.postMessage({ imageData, scopeType });
+            scopeWorker.postMessage({ imageData, scopeType: 'histogram' });
+            scopeWorker.postMessage({ imageData, scopeType: 'waveform' });
+            scopeWorker.postMessage({ imageData, scopeType: 'vectorscope' });
         }
 
         async function confirmAndExport() {
@@ -743,21 +726,6 @@
             }
             ctx.putImageData(scopeImageData, 0, 0);
         }
-
-        // --- Scope Tabs Logic ---
-        const scopeTabs = document.querySelectorAll('.scope-tab');
-        const scopePanels = document.querySelectorAll('.scope-panel');
-        scopeTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                scopeTabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                const targetPanelId = `${tab.dataset.scope}-panel`;
-                scopePanels.forEach(panel => {
-                    panel.classList.toggle('active', panel.id === targetPanelId);
-                });
-                triggerScopeUpdates(previewCanvas.getContext('2d').getImageData(0, 0, previewCanvas.width, previewCanvas.height));
-            });
-        });
 
         // --- LUT PARSING FUNCTIONS ---
         function parseCUBE(text) { const lines = text.split('\n'); let size = 0; const tableData = []; for (const line of lines) { const trimmedLine = line.trim(); if (trimmedLine.startsWith('#') || trimmedLine.length === 0) continue; if (trimmedLine.startsWith('TITLE')) continue; if (trimmedLine.startsWith('DOMAIN_MIN')) continue; if (trimmedLine.startsWith('DOMAIN_MAX')) continue; if (trimmedLine.startsWith('LUT_3D_SIZE')) { size = parseInt(trimmedLine.split(/\s+/)[1]); } else if (!isNaN(parseFloat(trimmedLine.split(' ')[0]))) { const parts = trimmedLine.split(/\s+/).map(Number); if (parts.length === 3) { tableData.push(parts); } } } if (size === 0 || tableData.length !== size * size * size) { return null; } const table3D = []; let i = 0; for (let z = 0; z < size; z++) { const slice = []; for (let y = 0; y < size; y++) { const row = []; for (let x = 0; x < size; x++) { row.push(tableData[i++]); } slice.push(row); } table3D.push(slice); } return { size, table: table3D }; }
