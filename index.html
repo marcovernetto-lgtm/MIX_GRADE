@@ -39,6 +39,15 @@
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
         }
+        .hero-text-panel {
+            background: rgba(10, 10, 10, 0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            display: inline-block;
+        }
         #lut-cube-container {
             position: absolute;
             top: 0;
@@ -67,18 +76,20 @@
 
     <!-- Hero Section -->
     <main>
-        <section class="relative text-center py-20 md:py-32 px-6">
+        <section class="relative text-center py-20 md:py-32 px-6 flex items-center justify-center min-h-[70vh]">
             <div id="lut-cube-container"></div>
             <div class="relative z-10 container mx-auto">
-                <h1 class="text-5xl md:text-7xl font-extrabold text-white leading-tight mb-4">
-                    Il Color Grading,<br> <span class="hero-gradient-text text-transparent bg-clip-text">Elevato a Potenza.</span>
-                </h1>
-                <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-8">
-                    Crea look unici e professionali miscelando le tue LUT preferite con un controllo senza precedenti. Tutto nel tuo browser, senza installare nulla.
-                </p>
-                <a href="app.html" class="cta-button text-white font-bold py-4 px-10 rounded-full text-lg inline-block">
-                    Inizia a Creare &rarr;
-                </a>
+                <div class="hero-text-panel">
+                    <h1 class="text-5xl md:text-7xl font-extrabold text-white leading-tight mb-4">
+                        Il Color Grading,<br> <span class="hero-gradient-text text-transparent bg-clip-text">Elevato a Potenza.</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-8">
+                        Crea look unici e professionali miscelando le tue LUT preferite con un controllo senza precedenti. Tutto nel tuo browser, senza installare nulla.
+                    </p>
+                    <a href="app.html" class="cta-button text-white font-bold py-4 px-10 rounded-full text-lg inline-block">
+                        Inizia a Creare &rarr;
+                    </a>
+                </div>
             </div>
         </section>
 
@@ -136,7 +147,7 @@
             // Scene setup
             const scene = new THREE.Scene();
             const camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.1, 1000);
-            camera.position.z = 15;
+            camera.position.z = 40;
 
             const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
             renderer.setSize(container.offsetWidth, container.offsetHeight);
@@ -144,9 +155,9 @@
             container.appendChild(renderer.domElement);
             
             // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
             scene.add(ambientLight);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
             directionalLight.position.set(5, 10, 7.5);
             scene.add(directionalLight);
 
@@ -166,8 +177,10 @@
                         
                         const material = new THREE.MeshStandardMaterial({ 
                             color: new THREE.Color(r, g, b),
-                            metalness: 0.2,
-                            roughness: 0.6
+                            metalness: 0.1,
+                            roughness: 0.8,
+                            transparent: true,
+                            opacity: 0.1
                         });
                         
                         const cube = new THREE.Mesh(geometry, material);
@@ -180,6 +193,7 @@
                     }
                 }
             }
+            cubeGroup.scale.set(5, 5, 5);
             scene.add(cubeGroup);
 
             // Mouse interaction
