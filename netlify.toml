@@ -4,7 +4,7 @@
 
 [[redirects]]
   from = "/*"
-  to = "/lut_mixer.html"
+  to = "/index.html"
   status = 200
 
 [[headers]]

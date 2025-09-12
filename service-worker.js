@@ -1,7 +1,8 @@
-const CACHE_NAME = 'lut-mixer-cache-v2';
+const CACHE_NAME = 'lut-mixer-cache-v3';
 const urlsToCache = [
   './',
-  './lut_mixer.html',
+  './index.html',
+  './app.html',
   './manifest.json'
 ];
 

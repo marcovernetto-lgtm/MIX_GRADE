@@ -1,15 +1,121 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MixGrade</title>
-    <meta http-equiv="refresh" content="0; url=./lut_mixer.html">
-    <link rel="canonical" href="./lut_mixer.html">
+    <title>MixGrade - The Ultimate LUT Mixer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <meta name="description" content="MixGrade: l'applicazione web definitiva per miscelare, visualizzare in anteprima ed esportare LUT video con qualità professionale.">
+    <meta name="theme-color" content="#000000">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: #e5e7eb;
+        }
+        .hero-gradient-text {
+            background-image: linear-gradient(to right, #14b8a6, #06b6d4, #3b82f6);
+        }
+        .feature-card {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+        }
+        .cta-button {
+            background-image: linear-gradient(to right, #14b8a6, #06b6d4);
+            transition: all 0.3s ease;
+        }
+        .cta-button:hover {
+            box-shadow: 0 0 20px rgba(20, 184, 166, 0.5);
+            transform: scale(1.05);
+        }
+        .glass-header {
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
 </head>
-<body>
-    <script>
-        window.location.href = './lut_mixer.html';
-    </script>
+<body class="antialiased">
+
+    <!-- Header -->
+    <header class="glass-header sticky top-0 z-50 border-b border-gray-800/50">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <img src="https://i.postimg.cc/FzHdn5n6/Mix-Grade-icon-transp.png" alt="MixGrade Icon" class="h-10 w-10 mr-3">
+                <span class="text-xl font-bold text-white">MixGrade</span>
+            </div>
+            <a href="app.html" class="cta-button text-white font-semibold py-2 px-6 rounded-full text-sm">
+                Vai all'App
+            </a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <main>
+        <section class="text-center py-20 md:py-32 px-6">
+            <div class="container mx-auto">
+                <h1 class="text-5xl md:text-7xl font-extrabold text-white leading-tight mb-4">
+                    Il Color Grading,<br> <span class="hero-gradient-text text-transparent bg-clip-text">Elevato a Potenza.</span>
+                </h1>
+                <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-8">
+                    Crea look unici e professionali miscelando le tue LUT preferite con un controllo senza precedenti. Tutto nel tuo browser, senza installare nulla.
+                </p>
+                <a href="app.html" class="cta-button text-white font-bold py-4 px-10 rounded-full text-lg inline-block">
+                    Inizia a Creare &rarr;
+                </a>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="py-20 px-6">
+            <div class="container mx-auto">
+                <div class="text-center mb-12">
+                    <h2 class="text-4xl font-bold text-white">Potente. Intuitivo. Veloce.</h2>
+                    <p class="text-gray-400 mt-2">Gli strumenti che ti servono per un workflow efficiente.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Feature 1 -->
+                    <div class="feature-card rounded-2xl p-8 text-center">
+                        <div class="text-4xl mb-4">🎨</div>
+                        <h3 class="text-xl font-bold text-white mb-2">Mixer Intuitivo</h3>
+                        <p class="text-gray-400">
+                            Combina più LUT, regola l'intensità di ciascuna e vedi i risultati in tempo reale sulla tua immagine.
+                        </p>
+                    </div>
+                    <!-- Feature 2 -->
+                    <div class="feature-card rounded-2xl p-8 text-center">
+                        <div class="text-4xl mb-4">↔️</div>
+                        <h3 class="text-xl font-bold text-white mb-2">Confronto Immediato</h3>
+                        <p class="text-gray-400">
+                            Usa lo slider Prima/Dopo per confrontare istantaneamente il tuo grading con l'immagine originale.
+                        </p>
+                    </div>
+                    <!-- Feature 3 -->
+                    <div class="feature-card rounded-2xl p-8 text-center">
+                        <div class="text-4xl mb-4">🚀</div>
+                        <h3 class="text-xl font-bold text-white mb-2">Esportazione Pro</h3>
+                        <p class="text-gray-400">
+                            Esporta la tua LUT combinata nei formati standard (.cube, .3dl) e con la dimensione che preferisci.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-800/50 mt-20">
+        <div class="container mx-auto px-6 py-8 text-center text-gray-500">
+            <p>&copy; 2025 MixGrade. Sviluppato da Vemarcus.</p>
+            <p class="text-sm mt-2">Un progetto open-source con licenza MIT.</p>
+        </div>
+    </footer>
+
 </body>
 </html>
