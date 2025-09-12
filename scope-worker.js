@@ -66,34 +66,31 @@ function calculateRGBParade(imageData) {
             const g = data[i + 1];
             const b = data[i + 2];
 
-            paradeData.r[(levels - 1 - r) * width + x]++;
-            paradeData.g[(levels - 1 - g) * width + x]++;
-            paradeData.b[(levels - 1 - b) * width + x]++;
+            if (r > 0) paradeData.r[(levels - 1 - r) * width + x]++;
+            if (g > 0) paradeData.g[(levels - 1 - g) * width + x]++;
+            if (b > 0) paradeData.b[(levels - 1 - b) * width + x]++;
         }
     }
     return { width, height: levels, ...paradeData };
 }
 
-
 function calculateVectorscope(imageData) {
     const data = imageData.data;
-    const size = 256; // The resolution of our data grid
+    const size = 256;
     const vectorscopeData = new Uint32Array(size * size).fill(0);
 
     for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
+        const r = data[i] / 255;
+        const g = data[i + 1] / 255;
+        const b = data[i + 2] / 255;
 
-        // YUV conversion constants for Rec. 709
-        const u = (b - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 0.5389;
-        const v = (r - (0.2126 * r + 0.7152 * g + 0.0722 * b)) * 0.6350;
+        // Rec. 709 YCbCr formula
+        const cb = -0.114572 * r - 0.385428 * g + 0.5 * b;
+        const cr = 0.5 * r - 0.454153 * g - 0.045847 * b;
 
-        // Map UV coordinates to our grid.
-        // The center of the grid is (size/2, size/2).
-        // We scale the UV values to fit within the grid.
-        const x = Math.round((v / 128) * (size / 2) + size / 2);
-        const y = Math.round((-u / 128) * (size / 2) + size / 2);
+        // Map CbCr from [-0.5, 0.5] to grid [0, size-1]
+        const x = Math.round((cr + 0.5) * (size - 1));
+        const y = Math.round((-cb + 0.5) * (size - 1));
         
         if (x >= 0 && x < size && y >= 0 && y < size) {
             vectorscopeData[y * size + x]++;
