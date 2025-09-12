@@ -53,11 +53,11 @@
 </head>
 <body class="bg-black text-gray-300 flex flex-col min-h-screen">
 
-    <header class="bg-gray-950/50 backdrop-blur-sm shadow-lg sticky top-0 z-20 border-b border-gray-800">
+    <header class="bg-gray-950/60 backdrop-blur-lg shadow-lg sticky top-0 z-20 border-b border-gray-800/50">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-white tracking-wider">
+            <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-500 tracking-wider">
                 <a id="infoIconBtn" href="#" class="inline-block align-middle cursor-pointer">
-                    <img src="https://i.postimg.cc/FzHdn5n6/Mix-Grade-icon-transp.png" alt="MixGrade Icon" class="inline-block h-8 w-8 mr-2 -mt-1">
+                    <img src="https://i.postimg.cc/FzHdn5n6/Mix-Grade-icon-transp.png" alt="MixGrade Icon" class="inline-block h-12 w-12 mr-2 -mt-1">
                 </a>
                 MixGrade
             </h1>
@@ -104,11 +104,11 @@
         </div>
     </main>
 
-    <div id="lutLibraryModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-4xl h-full max-h-[80vh] flex flex-col">
-            <div class="flex justify-between items-center p-4 border-b border-gray-800">
+    <div id="lutLibraryModal" class="fixed inset-0 bg-black/70 backdrop-blur-lg z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-900/80 border border-gray-700/50 rounded-xl shadow-2xl w-full max-w-4xl h-full max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800/70">
                 <h2 class="text-xl font-bold text-white">Libreria LUT</h2>
-                <button id="closeLibraryBtn" class="text-gray-400 hover:text-white">&times;</button>
+                <button id="closeLibraryBtn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
             </div>
             <div id="lutLibraryGrid" class="flex-grow p-4 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 </div>
@@ -118,11 +118,11 @@
         </div>
     </div>
 
-    <div id="exportModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-md flex flex-col">
-            <div class="flex justify-between items-center p-4 border-b border-gray-800">
+    <div id="exportModal" class="fixed inset-0 bg-black/70 backdrop-blur-lg z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-900/80 border border-gray-700/50 rounded-xl shadow-2xl w-full max-w-md flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800/70">
                 <h2 class="text-xl font-bold text-white">Esporta LUT Combinata</h2>
-                <button id="closeExportBtn" class="text-gray-400 hover:text-white">&times;</button>
+                <button id="closeExportBtn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
             </div>
             <div class="p-6 space-y-4">
                 <div>
@@ -152,11 +152,11 @@
         </div>
     </div>
 
-    <div id="infoModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-xl flex flex-col">
-            <div class="flex justify-between items-center p-4 border-b border-gray-800">
+    <div id="infoModal" class="fixed inset-0 bg-black/70 backdrop-blur-lg z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-900/80 border border-gray-700/50 rounded-xl shadow-2xl w-full max-w-xl flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-gray-800/70">
                 <h2 class="text-xl font-bold text-white">Informazioni su MixGrade</h2>
-                <button id="closeInfoModalBtn" class="text-gray-400 hover:text-white">&times;</button>
+                <button id="closeInfoModalBtn" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
             </div>
             <div class="p-6 space-y-4 text-gray-300">
                 <p><strong>MixGrade</strong> è un'applicazione web progressiva (PWA) progettata per aiutarti a miscelare più tabelle di ricerca (LUT) e applicarle alle tue immagini.</p>
@@ -365,7 +365,7 @@
                      <span class="text-xs font-medium text-gray-400">Attiva</span>
                      <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" class="sr-only peer lut-toggle" data-id="${lut.id}" ${lut.isActive ? 'checked' : ''}>
-                        <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                        <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-teal-500/50 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                     </label>
                 </div>
                 <div class="flex items-center space-x-3">
